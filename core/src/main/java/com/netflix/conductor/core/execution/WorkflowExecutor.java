@@ -713,16 +713,16 @@ public class WorkflowExecutor {
         executionDAOFacade.updateWorkflow(workflow);
         LOGGER.debug("Completed workflow execution for {}", workflow.getWorkflowId());
 
+        if (workflow.getWorkflowDefinition().isWorkflowStatusListenerEnabled()) {
+            workflowStatusListener.onWorkflowCompleted(workflow);
+        }
+
         if (StringUtils.isNotEmpty(workflow.getParentWorkflowId())) {
             updateParentWorkflowTask(workflow);
             decide(workflow.getParentWorkflowId());
         }
         Monitors.recordWorkflowCompletion(workflow.getWorkflowName(), workflow.getEndTime() - workflow.getStartTime(), workflow.getOwnerApp());
         queueDAO.remove(DECIDER_QUEUE, workflow.getWorkflowId());    //remove from the sweep queue
-
-        if (workflow.getWorkflowDefinition().isWorkflowStatusListenerEnabled()) {
-            workflowStatusListener.onWorkflowCompleted(workflow);
-        }
 
         executionLockService.releaseLock(workflow.getWorkflowId());
         executionLockService.deleteLock(workflow.getWorkflowId());
